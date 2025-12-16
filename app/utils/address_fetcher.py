@@ -2,6 +2,7 @@ import requests
 import random
 import logging
 import time
+import os
 from faker import Faker
 from app.utils.country_manager import country_manager
 
@@ -10,7 +11,10 @@ logger = logging.getLogger(__name__)
 class AddressFetcher:
     def __init__(self):
         # Nominatim requires a valid User-Agent with contact info
-        self.user_agent = "RealAddressGenerator/1.0 (contact@example.com)"
+        # Allow configuration via environment variables
+        self.contact_email = os.getenv("NOMINATIM_EMAIL", "contact@example.com")
+        self.user_agent = os.getenv("NOMINATIM_USER_AGENT", f"RealAddressGenerator/1.0 ({self.contact_email})")
+
         self.nominatim_url = "https://nominatim.openstreetmap.org/search"
         self.search_keywords = [
             "hotel", "restaurant", "school", "cafe", "bakery", "pharmacy", 
@@ -24,11 +28,28 @@ class AddressFetcher:
             "DE": ["Berlin", "Munich", "Hamburg"],
             "FR": ["Paris", "Lyon", "Marseille"],
         }
+        self.last_request_time = 0
+
+        # Check for configured User-Agent to warn user if still default
+        if "contact@example.com" in self.user_agent:
+            logger.warning("Using default User-Agent with 'contact@example.com'. This may cause 403 errors from Nominatim. Set NOMINATIM_EMAIL env var.")
 
     def _get_headers(self):
         return {
             "User-Agent": self.user_agent
         }
+
+    def _wait_for_rate_limit(self):
+        """
+        Ensures we respect Nominatim's absolute maximum of 1 request per second.
+        """
+        current_time = time.time()
+        elapsed = current_time - self.last_request_time
+        if elapsed < 1.1: # 1.1 seconds to be safe
+            sleep_time = 1.1 - elapsed
+            logger.debug(f"Rate limiting: sleeping for {sleep_time:.2f}s")
+            time.sleep(sleep_time)
+        self.last_request_time = time.time()
 
     def fetch_real_address(self, country_code: str, city: str = None, zipcode: str = None, state: str = None):
         """
@@ -73,6 +94,8 @@ class AddressFetcher:
         """
         Helper to execute the search query.
         """
+        self._wait_for_rate_limit()
+
         keyword = random.choice(self.search_keywords)
         
         query_parts = []
@@ -115,6 +138,9 @@ class AddressFetcher:
                     if valid_results:
                         picked = random.choice(valid_results)
                         return self._parse_osm_result(picked)
+            elif resp.status_code == 403:
+                logger.error("Nominatim returned 403 Forbidden. Please check your User-Agent or Rate Limits. You may need to set NOMINATIM_EMAIL or NOMINATIM_USER_AGENT environment variables.")
+                logger.warning(f"Response text: {resp.text}")
             else:
                 logger.warning(f"Nominatim returned status {resp.status_code}")
         except Exception as e:
