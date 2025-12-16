@@ -48,9 +48,9 @@ def _process_generation(country_input, state, city, zipcode):
     # 1. Normalize Country
     country_code = country_manager.normalize(country_input)
     if not country_code:
-        # If normalization fails, we could error out, or default to US?
-        # User wants "Adaptive". If input is total garbage, error is appropriate.
-        raise HTTPException(status_code=400, detail=f"Unsupported or unknown country: {country_input}")
+        # Fallback to US for adaptive behavior if normalization fails
+        logger.warning(f"Country normalization failed for input '{country_input}'. Defaulting to US.")
+        country_code = "US"
 
     # 2. Fetch Real Address
     real_address_data = address_fetcher.fetch_real_address(country_code, city, zipcode, state)
