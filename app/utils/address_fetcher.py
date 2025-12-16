@@ -12,7 +12,7 @@ class AddressFetcher:
     def __init__(self):
         # Nominatim requires a valid User-Agent with contact info
         # Allow configuration via environment variables
-        self.contact_email = os.getenv("NOMINATIM_EMAIL", "contact@example.com")
+        self.contact_email = os.getenv("NOMINATIM_EMAIL", "admin@realaddressgenerator.com")
         self.user_agent = os.getenv("NOMINATIM_USER_AGENT", f"RealAddressGenerator/1.0 ({self.contact_email})")
 
         self.nominatim_url = "https://nominatim.openstreetmap.org/search"
@@ -33,6 +33,8 @@ class AddressFetcher:
         # Check for configured User-Agent to warn user if still default
         if "contact@example.com" in self.user_agent:
             logger.warning("Using default User-Agent with 'contact@example.com'. This may cause 403 errors from Nominatim. Set NOMINATIM_EMAIL env var.")
+        elif "admin@realaddressgenerator.com" in self.user_agent:
+             logger.info("Using default User-Agent with 'admin@realaddressgenerator.com'. Set NOMINATIM_EMAIL env var to use your own contact.")
 
     def _get_headers(self):
         return {
