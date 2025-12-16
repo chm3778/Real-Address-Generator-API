@@ -1,5 +1,6 @@
 from babel import Locale
 import logging
+from faker.config import AVAILABLE_LOCALES
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -8,7 +9,9 @@ logger = logging.getLogger(__name__)
 class CountryManager:
     def __init__(self):
         self.country_map = {}
+        self.iso_to_faker = {}
         self.load_country_data()
+        self._build_faker_map()
 
     def load_country_data(self):
         """
@@ -54,6 +57,44 @@ class CountryManager:
         
         logger.info(f"Loaded {len(self.country_map)} country name mappings.")
 
+    def _build_faker_map(self):
+        """
+        Dynamically builds a map from ISO country codes to Faker locales
+        based on available locales in Faker.
+        """
+        territory_locales = {}
+
+        for loc_str in AVAILABLE_LOCALES:
+            try:
+                l = Locale.parse(loc_str)
+                terr = l.territory
+                if terr:
+                    if terr not in territory_locales:
+                        territory_locales[terr] = []
+                    territory_locales[terr].append(loc_str)
+            except Exception:
+                # Ignore locales that cannot be parsed by Babel
+                continue
+
+        for territory, locales in territory_locales.items():
+            # Strategy: prefer English (en_XX), then fallback to first alphabetically
+            selected = None
+
+            # 1. Try to find a locale starting with 'en_'
+            for loc in locales:
+                if loc.startswith('en_'):
+                    selected = loc
+                    break
+
+            # 2. If not found, just pick the first one after sorting
+            if not selected:
+                locales.sort()
+                selected = locales[0]
+
+            self.iso_to_faker[territory] = selected
+
+        logger.info(f"Built Faker locale map with {len(self.iso_to_faker)} entries.")
+
     def normalize(self, input_str: str) -> str:
         """
         Normalizes a country string to its ISO 2-letter code.
@@ -70,29 +111,11 @@ class CountryManager:
         Returns a suitable Faker locale code for a given ISO country code.
         Defaults to 'en_US' if no specific mapping is found.
         """
-        # Mapping ISO codes to Faker locales
-        # This is not exhaustive but covers major ones. 
-        # We can expand this or use a library, but a simple map is efficient here.
-        iso_to_faker = {
-            "US": "en_US",
-            "CN": "zh_CN",
-            "GB": "en_GB",
-            "FR": "fr_FR",
-            "DE": "de_DE",
-            "JP": "ja_JP",
-            "KR": "ko_KR",
-            "IT": "it_IT",
-            "ES": "es_ES",
-            "RU": "ru_RU",
-            "IN": "en_IN", # or hi_IN
-            "BR": "pt_BR",
-            "CA": "en_CA",
-            "AU": "en_AU",
-            "TW": "zh_TW",
-            "HK": "zh_HK",
-            # Add more as needed
-        }
-        return iso_to_faker.get(iso_code, "en_US")
+        if not iso_code:
+            return "en_US"
+
+        # Use the dynamically built map, falling back to "en_US"
+        return self.iso_to_faker.get(iso_code, "en_US")
 
 # Global instance
 country_manager = CountryManager()
