@@ -1,4 +1,5 @@
 from babel import Locale
+from babel.core import get_global
 import logging
 
 # Configure logging
@@ -36,6 +37,18 @@ class CountryManager:
         valid_codes = set(self.country_map.values())
         for code in valid_codes:
             self.country_map[code.lower()] = code
+
+        # Add 3-letter ISO codes using babel territory aliases
+        try:
+            aliases = get_global('territory_aliases')
+            for alias, replacement in aliases.items():
+                # We are looking for 3-letter codes that map to a 2-letter code
+                if len(alias) == 3 and alias.isalpha() and isinstance(replacement, list) and len(replacement) == 1:
+                    target_code = replacement[0]
+                    if target_code in valid_codes:
+                        self.country_map[alias.lower()] = target_code
+        except Exception as e:
+            logger.error(f"Error loading 3-letter codes: {e}")
 
         # 4. Add Manual Aliases (Colloquialisms)
         # These are commonly used terms that might not appear in official territory lists
