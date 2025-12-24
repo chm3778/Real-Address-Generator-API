@@ -3,7 +3,6 @@ import random
 import logging
 import time
 import os
-from faker import Faker
 from app.utils.country_manager import country_manager
 
 logger = logging.getLogger(__name__)
@@ -58,8 +57,7 @@ class AddressFetcher:
         Fetches a real address from OpenStreetMap (Nominatim).
         Uses intelligent fallbacks if specific inputs fail.
         """
-        locale = country_manager.get_faker_locale(country_code)
-        fake = Faker(locale)
+        fake = country_manager.get_faker(country_code)
         
         # Level 1: Specific User Input (City OR Zipcode)
         # If Zipcode is provided, it's very specific, so we try to use it.
