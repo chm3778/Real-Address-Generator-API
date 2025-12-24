@@ -1,4 +1,3 @@
-from faker import Faker
 from app.utils.country_manager import country_manager
 
 class PersonaGenerator:
@@ -6,8 +5,7 @@ class PersonaGenerator:
         """
         Generates a random name and phone number for the given country.
         """
-        locale = country_manager.get_faker_locale(country_code)
-        fake = Faker(locale)
+        fake = country_manager.get_faker(country_code)
 
         return {
             "name": fake.name(),

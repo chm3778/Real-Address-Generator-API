@@ -1,6 +1,7 @@
 from babel import Locale
 from babel.core import get_global
 import logging
+from faker import Faker
 from faker.config import AVAILABLE_LOCALES
 
 # Configure logging
@@ -11,6 +12,7 @@ class CountryManager:
     def __init__(self):
         self.country_map = {}
         self.iso_to_faker = {}
+        self.faker_cache = {}
         self.load_country_data()
         self._build_faker_map()
 
@@ -129,6 +131,15 @@ class CountryManager:
 
         # Use the dynamically built map, falling back to "en_US"
         return self.iso_to_faker.get(iso_code, "en_US")
+
+    def get_faker(self, iso_code: str) -> Faker:
+        """
+        Returns a cached Faker instance for the given ISO country code.
+        """
+        locale = self.get_faker_locale(iso_code)
+        if locale not in self.faker_cache:
+            self.faker_cache[locale] = Faker(locale)
+        return self.faker_cache[locale]
 
 # Global instance
 country_manager = CountryManager()
