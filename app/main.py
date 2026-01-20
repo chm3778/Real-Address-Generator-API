@@ -30,6 +30,7 @@ class AddressResponse(BaseModel):
     zipcode: Optional[str]
     country: str
     full_address: str
+    google_maps_url: Optional[str] = None
 
 @app.get("/api/generate", response_model=AddressResponse)
 def generate_address(
@@ -77,5 +78,6 @@ def _process_generation(country_input, state, city, zipcode):
         "city_state": city_state, # Province/City
         "zipcode": real_address_data['zipcode'],
         "country": real_address_data['country'] or country_code,
-        "full_address": real_address_data['full_address']
+        "full_address": real_address_data['full_address'],
+        "google_maps_url": real_address_data.get('google_maps_url')
     }

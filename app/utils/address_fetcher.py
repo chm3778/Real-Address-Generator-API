@@ -172,13 +172,20 @@ class AddressFetcher:
         country = addr.get('country')
         full_address = result.get('display_name')
 
+        lat = result.get('lat')
+        lon = result.get('lon')
+        google_maps_url = None
+        if lat and lon:
+            google_maps_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
+
         return {
             "address": address_line,
             "city": city,
             "state": state,
             "zipcode": zipcode,
             "country": country,
-            "full_address": full_address
+            "full_address": full_address,
+            "google_maps_url": google_maps_url
         }
 
 address_fetcher = AddressFetcher()
