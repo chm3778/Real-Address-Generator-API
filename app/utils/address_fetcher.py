@@ -68,11 +68,12 @@ class AddressFetcher:
 
         # Level 2: Ignore User City/State/Zip (if they failed), generate a Random City for that country
         logger.info(f"Attempting Level 2 search with random city for {country_code}")
-        for _ in range(2): 
+        for _ in range(5):
             try:
                 random_city = fake.city()
                 address = self._query_nominatim(country_code, city=random_city)
-                if address: return address
+                # Prioritize address with zipcode
+                if address and address.get('zipcode'): return address
             except Exception as e:
                 logger.warning(f"Error in Level 2 random city generation: {e}")
         
@@ -136,8 +137,22 @@ class AddressFetcher:
                 if results:
                     valid_results = [r for r in results if 'address' in r]
                     if valid_results:
-                        picked = random.choice(valid_results)
-                        return self._parse_osm_result(picked)
+                        # Prioritize results with postcode
+                        results_with_zip = [r for r in valid_results if r['address'].get('postcode')]
+
+                        if results_with_zip:
+                            picked = random.choice(results_with_zip)
+                        else:
+                            picked = random.choice(valid_results)
+
+                        address_data = self._parse_osm_result(picked)
+
+                        # Fallback for missing zipcode ONLY if user provided it
+                        if not address_data.get('zipcode') and zipcode:
+                            address_data['zipcode'] = zipcode
+                            logger.info(f"Zipcode missing from OSM, using provided input: {zipcode}")
+
+                        return address_data
             elif resp.status_code == 403:
                 logger.error("Nominatim returned 403 Forbidden. Please check your User-Agent or Rate Limits. You may need to set NOMINATIM_EMAIL or NOMINATIM_USER_AGENT environment variables.")
                 logger.warning(f"Response text: {resp.text}")
