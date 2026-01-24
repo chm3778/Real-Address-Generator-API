@@ -50,7 +50,8 @@ class TestAddressFetcher(unittest.TestCase):
             "address": {
                 "road": "Random St",
                 "city": "Chicago",
-                "country": "United States"
+                "country": "United States",
+                "postcode": "60601"
             },
             "display_name": "Random St, Chicago, US"
         }
